@@ -1,0 +1,75 @@
+- name: Instalar Minikube + kubectl usando Docker
+  hosts: minikube_hosts
+  become: true
+
+  vars:
+    minikube_version: "v1.33.1"
+    kubectl_version: "stable"
+    install_kubectl: true
+
+  tasks:
+    - name: Paquetes base
+      apt:
+        name:
+          - curl
+          - ca-certificates
+        update_cache: yes
+        state: present
+
+    - name: Instalar Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Habilitar e iniciar Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Añadir usuario al grupo docker
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Descargar minikube
+      get_url:
+        url: >-
+          {% if minikube_version == 'latest' %}
+          https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+          {% else %}
+          https://github.com/kubernetes/minikube/releases/download/{{ minikube_version }}/minikube-linux-amd64
+          {% endif %}
+        dest: /usr/local/bin/minikube
+        mode: "0755"
+
+    - name: Instalar kubectl
+      when: install_kubectl
+      block:
+        - name: Obtener versión estable de kubectl (stable.txt)
+          when: kubectl_version == "stable"
+          uri:
+            url: "https://dl.k8s.io/release/stable.txt"
+            return_content: true
+          register: kubectl_stable
+    
+        - name: Definir kubectl_version_final
+          set_fact:
+            kubectl_version_final: >-
+              {{ (kubectl_stable.content | trim) if kubectl_version == 'stable' else kubectl_version }}
+    
+        - name: Descargar kubectl
+          get_url:
+            url: "https://dl.k8s.io/release/{{ kubectl_version_final }}/bin/linux/amd64/kubectl"
+            dest: /usr/local/bin/kubectl
+            mode: "0755"
+
+    - name: Arrancar Minikube
+      become: false
+      environment:
+        # Se ejecuta como usuario, no como root
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+      command: "minikube start --driver=docker"
+      register: minikube_start
+      changed_when: "'Done!' in minikube_start.stdout or 'minikube is running' in minikube_start.stdout"

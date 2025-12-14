@@ -1,0 +1,30 @@
+# ----------------------------
+# Terraform
+# ----------------------------
+
+# 1. Ignorar la carpeta donde Terraform guarda los proveedores y módulos cacheados
+.terraform/
+
+# 2. Ignorar únicamente el lockfile (se regenera con init)
+.terraform.lock.hcl
+
+# 3. Ignorar planes y overrides temporales
+*.tfplan
+*.tfplan.*
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+
+# 4. Ignorar archivos temporales del editor o del sistema
+#    (agrega o quita según el IDE / editor que uses)
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# *.tfvars
+*README.md
