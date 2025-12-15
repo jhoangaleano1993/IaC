@@ -32,8 +32,8 @@ Este repositorio contiene la implementación completa de una infraestructura de 
 
 ```bash
 # 1. Clonar el repositorio
-git clone <repository-url>
-cd PruebaTecnicaDevops
+git clone https://github.com/jhoangaleano1993/IaC.git
+cd IaC
 
 # 2. Crear backend de Terraform (S3 + DynamoDB)
 cd iac/terraform-backend
@@ -60,7 +60,7 @@ terraform output -raw secret_access_key
 ## 📂 Estructura del Repositorio
 
 ```
-PruebaTecnicaDevops/
+IaC/
 ├── azure-pipelines.yml          # Pipeline principal de Azure DevOps
 ├── .gitignore
 ├── README.md
@@ -395,8 +395,8 @@ Este proyecto es de uso educativo y de evaluación técnica.
 ## 📞 Soporte
 
 Para preguntas o problemas:
-- 📧 Email: [tu-email]
-- 📝 Issues: [GitHub Issues]
+- 📧 Email: jhoangaleano1993@gmail.com
+- 📝 Issues: [GitHub Issues](https://github.com/jhoangaleano1993/IaC/issues)
 - 📚 Documentación: [docs/](docs/)
 
 ---
