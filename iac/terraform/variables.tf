@@ -46,5 +46,3 @@ variable "kubernetes_version" {
 variable "node_instance_type" {
   type = string
 }
-
-

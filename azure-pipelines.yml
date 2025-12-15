@@ -23,6 +23,9 @@ variables:
     value: 'eks-cluster.tfstate'
   - name: awsRegion
     value: 'us-east-1'
+  # Variable group que contiene AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY
+  # Configurar en: Pipelines > Library > Variable groups
+  - group: AWS-Credentials
 
 stages:
   - stage: Validate
@@ -54,6 +57,8 @@ stages:
                   -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
                   -backend-config="encrypt=true"
             env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
               AWS_DEFAULT_REGION: $(awsRegion)
 
           - task: Bash@3
@@ -104,6 +109,8 @@ stages:
                   -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
                   -backend-config="encrypt=true"
             env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
               AWS_DEFAULT_REGION: $(awsRegion)
 
           - task: Bash@3
@@ -114,6 +121,8 @@ stages:
               script: |
                 terraform plan -out=tfplan
             env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
               AWS_DEFAULT_REGION: $(awsRegion)
 
           - task: PublishPipelineArtifact@1
@@ -185,6 +194,8 @@ stages:
                         -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
                         -backend-config="encrypt=true"
                   env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
                 - task: Bash@3
@@ -195,6 +206,8 @@ stages:
                     script: |
                       terraform apply -auto-approve tfplan
                   env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
                 - task: Bash@3
@@ -217,6 +230,8 @@ stages:
                       echo "=== EKS Addons ==="
                       aws eks list-addons --cluster-name devops-eks --region $(awsRegion)
                   env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
   - stage: Destroy
