@@ -119,11 +119,15 @@ stages:
               targetType: 'inline'
               workingDirectory: '$(workingDirectory)'
               script: |
-                terraform plan -out=tfplan
+                echo "=== Iniciando Terraform Plan ==="
+                terraform plan -input=false -out=tfplan -no-color
+                echo "=== Terraform Plan Completado ==="
             env:
               AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
               AWS_DEFAULT_REGION: $(awsRegion)
+              TF_IN_AUTOMATION: "true"
+              TF_LOG: ""
 
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Terraform Plan'
@@ -146,7 +150,7 @@ stages:
     jobs:
       - deployment: TerraformApply
         displayName: 'Apply Infrastructure Changes'
-        environment: 'Production'
+        environment: 'Development'
         strategy:
           runOnce:
             deploy:
@@ -204,11 +208,15 @@ stages:
                     targetType: 'inline'
                     workingDirectory: '$(workingDirectory)'
                     script: |
-                      terraform apply -auto-approve tfplan
+                      echo "=== Iniciando Terraform Apply ==="
+                      terraform apply -auto-approve -no-color tfplan
+                      echo "=== Terraform Apply Completado ==="
                   env:
                     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
                     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
+                    TF_IN_AUTOMATION: "true"
+                    TF_LOG: ""
 
                 - task: Bash@3
                   displayName: 'Configure kubectl and verify cluster'
@@ -234,6 +242,61 @@ stages:
                     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
+                - task: Bash@3
+                  displayName: 'Setup RBAC for Azure DevOps'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(System.DefaultWorkingDirectory)/k8s/rbac'
+                    script: |
+                      echo "=== Configurando RBAC para Azure DevOps ==="
+
+                      # Aplicar manifiestos de RBAC
+                      echo "Creando namespace 'devops'..."
+                      kubectl apply -f namespace.yaml
+
+                      echo "Creando ServiceAccount 'azure-devops-sa'..."
+                      kubectl apply -f serviceaccount.yaml
+
+                      echo "Creando Role..."
+                      kubectl apply -f role.yaml
+
+                      echo "Creando RoleBinding..."
+                      kubectl apply -f rolebinding.yaml
+
+                      echo "Creando ClusterRole..."
+                      kubectl apply -f clusterrole.yaml
+
+                      echo "Creando ClusterRoleBinding..."
+                      kubectl apply -f clusterrolebinding.yaml
+
+                      echo "Esperando a que el ServiceAccount esté listo..."
+                      sleep 5
+
+                      # Crear Secret para el token (K8s 1.24+)
+                      echo "Creando Secret para el token..."
+                      cat <<EOF | kubectl apply -f -
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: azure-devops-sa-token
+                        namespace: devops
+                        annotations:
+                          kubernetes.io/service-account.name: azure-devops-sa
+                      type: kubernetes.io/service-account-token
+                      EOF
+
+                      sleep 3
+
+                      # Verificar RBAC
+                      echo ""
+                      echo "=== Verificando RBAC ==="
+                      kubectl get namespace devops
+                      kubectl get serviceaccount -n devops
+                      kubectl get role,rolebinding -n devops
+
+                      echo ""
+                      echo "=== RBAC configurado exitosamente ==="
+
   - stage: Destroy
     displayName: 'Terraform Destroy (Manual)'
     dependsOn: []
@@ -241,7 +304,7 @@ stages:
     jobs:
       - deployment: TerraformDestroy
         displayName: 'Destroy Infrastructure'
-        environment: 'Production-Destroy'
+        environment: 'Development-Destroy'
         strategy:
           runOnce:
             deploy:
@@ -279,6 +342,12 @@ stages:
                     targetType: 'inline'
                     workingDirectory: '$(workingDirectory)'
                     script: |
-                      terraform destroy -auto-approve
+                      echo "=== Iniciando Terraform Destroy ==="
+                      terraform destroy -auto-approve -no-color
+                      echo "=== Terraform Destroy Completado ==="
                   env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
+                    TF_IN_AUTOMATION: "true"
+                    TF_LOG: ""
