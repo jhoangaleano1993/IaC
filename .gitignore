@@ -25,8 +25,9 @@ crash.log
 crash.*.log
 
 # 5. Ignorar archivos de variables que pueden contener secrets
-*.tfvars
+# Nota: terraform.tfvars no contiene datos sensibles, por lo que se incluye en el repo
 *.tfvars.json
+!terraform.tfvars
 !terraform.tfvars.example
 !*.auto.tfvars.example
 
