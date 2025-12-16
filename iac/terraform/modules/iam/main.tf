@@ -136,6 +136,16 @@ resource "aws_iam_policy" "terraform_permissions" {
           "elasticloadbalancing:*"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "SSMParameterAccess"
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = "*"
       }
     ]
   })

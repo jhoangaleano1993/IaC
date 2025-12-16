@@ -24,8 +24,6 @@ variables:
     value: 'eks-cluster.tfstate'
   - name: awsRegion
     value: 'us-east-1'
-  # Variable group que contiene AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY
-  # Configurar en: Pipelines > Library > Variable groups
   - group: AWS-Credentials
 
 stages:
