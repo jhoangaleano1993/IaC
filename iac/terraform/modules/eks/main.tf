@@ -2,7 +2,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.10.1"
 
-  name = var.cluster_name
+  name               = var.cluster_name
   kubernetes_version = var.kubernetes_version
 
   endpoint_public_access = true
@@ -33,7 +33,7 @@ module "eks" {
   addons = {
     coredns    = {}
     kube-proxy = {}
-    vpc-cni    = {
+    vpc-cni = {
       before_compute = true
     }
   }
