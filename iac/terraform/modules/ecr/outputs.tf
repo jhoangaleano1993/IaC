@@ -20,5 +20,5 @@ output "registry_id" {
 
 output "repository_uri" {
   description = "URI del repositorio para docker push/pull"
-  value       = "${aws_ecr_repository.this.repository_url}"
+  value       = aws_ecr_repository.this.repository_url
 }
