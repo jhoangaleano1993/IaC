@@ -119,7 +119,10 @@ resource "aws_iam_policy" "terraform_permissions" {
           "logs:TagLogGroup",
           "logs:UntagLogGroup",
           "logs:PutRetentionPolicy",
-          "logs:DeleteRetentionPolicy"
+          "logs:DeleteRetentionPolicy",
+          "logs:ListTagsForResource",
+          "logs:TagResource",
+          "logs:UntagResource"
         ]
         Resource = "*"
       },
