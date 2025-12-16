@@ -25,3 +25,20 @@ module "eks" {
   # Node groups deben usar solo subnets privadas (con NAT Gateway)
   private_subnet_ids = module.vpc.private_subnets
 }
+
+# Módulo ECR - Repositorio para imágenes Docker
+module "ecr" {
+  source = "./modules/ecr"
+
+  repository_name         = "app-hola-mundo"
+  environment             = var.environment
+  image_tag_mutability    = "MUTABLE"
+  scan_on_push            = true
+  enable_lifecycle_policy = true
+  max_image_count         = 10
+  untagged_days           = 7
+
+  tags = {
+    Project = "AppHolaMundo"
+  }
+}
