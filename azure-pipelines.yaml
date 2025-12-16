@@ -242,6 +242,10 @@ stages:
 
                       echo ""
                       echo "=== RBAC configurado exitosamente ==="
+                  env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+                    AWS_DEFAULT_REGION: $(awsRegion)
 
   - stage: Destroy
     displayName: 'Terraform Destroy (Manual)'
