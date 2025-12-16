@@ -117,7 +117,9 @@ resource "aws_iam_policy" "terraform_permissions" {
           "logs:DescribeLogStreams",
           "logs:DeleteLogGroup",
           "logs:TagLogGroup",
-          "logs:UntagLogGroup"
+          "logs:UntagLogGroup",
+          "logs:PutRetentionPolicy",
+          "logs:DeleteRetentionPolicy"
         ]
         Resource = "*"
       },
@@ -144,6 +146,28 @@ resource "aws_iam_policy" "terraform_permissions" {
           "ssm:GetParameter",
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "KMSManagement"
+        Effect = "Allow"
+        Action = [
+          "kms:CreateKey",
+          "kms:DescribeKey",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags",
+          "kms:PutKeyPolicy",
+          "kms:ScheduleKeyDeletion",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:ListAliases",
+          "kms:ListKeys"
         ]
         Resource = "*"
       }
