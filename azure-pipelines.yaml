@@ -121,8 +121,14 @@ stages:
               workingDirectory: '$(workingDirectory)'
               script: |
                 echo "=== Iniciando Terraform Plan ==="
+                set -e  # Detener si hay errores
                 terraform plan -input=false -out=tfplan -no-color
-                echo "=== Terraform Plan Completado ==="
+                PLAN_EXIT_CODE=$?
+                if [ $PLAN_EXIT_CODE -ne 0 ]; then
+                  echo "ERROR: Terraform plan falló con código de salida $PLAN_EXIT_CODE"
+                  exit $PLAN_EXIT_CODE
+                fi
+                echo "=== Terraform Plan Completado Exitosamente ==="
             env:
               AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
               AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
