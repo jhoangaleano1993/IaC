@@ -1,0 +1,353 @@
+trigger:
+  branches:
+    include:
+      - main
+      - dev
+  paths:
+    include:
+      - iac/terraform/**
+
+pool:
+  name: Default
+
+variables:
+  - name: terraformVersion
+    value: '1.13.0'
+  - name: workingDirectory
+    value: '$(System.DefaultWorkingDirectory)/iac/terraform'
+  - name: backendS3Bucket
+    value: 'tfstate-devops-289997607932'
+  - name: backendDynamoDBTable
+    value: 'terraform-state-lock'
+  - name: backendKey
+    value: 'eks-cluster.tfstate'
+  - name: awsRegion
+    value: 'us-east-1'
+  # Variable group que contiene AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY
+  # Configurar en: Pipelines > Library > Variable groups
+  - group: AWS-Credentials
+
+stages:
+  - stage: Validate
+    displayName: 'Terraform Validate'
+    jobs:
+      - job: TerraformValidate
+        displayName: 'Validate Terraform Configuration'
+        steps:
+          - task: Bash@3
+            displayName: 'Install Terraform'
+            inputs:
+              targetType: 'inline'
+              script: |
+                wget https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip
+                unzip terraform_$(terraformVersion)_linux_amd64.zip
+                sudo mv terraform /usr/local/bin/
+                terraform version
+
+          - task: Bash@3
+            displayName: 'Terraform Init'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '$(workingDirectory)'
+              script: |
+                terraform init \
+                  -backend-config="bucket=$(backendS3Bucket)" \
+                  -backend-config="key=$(backendKey)" \
+                  -backend-config="region=$(awsRegion)" \
+                  -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
+                  -backend-config="encrypt=true"
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+              AWS_DEFAULT_REGION: $(awsRegion)
+
+          - task: Bash@3
+            displayName: 'Terraform Validate'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '$(workingDirectory)'
+              script: |
+                terraform validate
+
+          - task: Bash@3
+            displayName: 'Terraform Format Check'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '$(workingDirectory)'
+              script: |
+                terraform fmt -check -recursive || true
+            continueOnError: true
+
+  - stage: Plan
+    displayName: 'Terraform Plan'
+    dependsOn: Validate
+    condition: succeeded()
+    jobs:
+      - job: TerraformPlan
+        displayName: 'Plan Infrastructure Changes'
+        steps:
+          - task: Bash@3
+            displayName: 'Install Terraform'
+            inputs:
+              targetType: 'inline'
+              script: |
+                wget https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip
+                unzip terraform_$(terraformVersion)_linux_amd64.zip
+                sudo mv terraform /usr/local/bin/
+                terraform version
+
+          - task: Bash@3
+            displayName: 'Terraform Init'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '$(workingDirectory)'
+              script: |
+                terraform init \
+                  -backend-config="bucket=$(backendS3Bucket)" \
+                  -backend-config="key=$(backendKey)" \
+                  -backend-config="region=$(awsRegion)" \
+                  -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
+                  -backend-config="encrypt=true"
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+              AWS_DEFAULT_REGION: $(awsRegion)
+
+          - task: Bash@3
+            displayName: 'Terraform Plan'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '$(workingDirectory)'
+              script: |
+                echo "=== Iniciando Terraform Plan ==="
+                terraform plan -input=false -out=tfplan -no-color
+                echo "=== Terraform Plan Completado ==="
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+              AWS_DEFAULT_REGION: $(awsRegion)
+              TF_IN_AUTOMATION: "true"
+              TF_LOG: ""
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Terraform Plan'
+            inputs:
+              targetPath: '$(workingDirectory)/tfplan'
+              artifact: 'terraform-plan'
+              publishLocation: 'pipeline'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Terraform Files'
+            inputs:
+              targetPath: '$(workingDirectory)'
+              artifact: 'terraform-files'
+              publishLocation: 'pipeline'
+
+  - stage: Apply
+    displayName: 'Terraform Apply'
+    dependsOn: Plan
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: TerraformApply
+        displayName: 'Apply Infrastructure Changes'
+        environment: 'Development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: Bash@3
+                  displayName: 'Install Terraform, AWS CLI and kubectl'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      # Instalar Terraform
+                      wget https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip
+                      unzip terraform_$(terraformVersion)_linux_amd64.zip
+                      sudo mv terraform /usr/local/bin/
+                      terraform version
+
+                      # Instalar AWS CLI v2
+                      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                      unzip awscliv2.zip
+                      sudo ./aws/install
+                      aws --version
+
+                      # Instalar kubectl
+                      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                      sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+                      kubectl version --client
+
+                - task: DownloadPipelineArtifact@2
+                  displayName: 'Download Terraform Plan'
+                  inputs:
+                    artifact: 'terraform-plan'
+                    path: '$(workingDirectory)'
+
+                - task: Bash@3
+                  displayName: 'Terraform Init'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(workingDirectory)'
+                    script: |
+                      terraform init \
+                        -backend-config="bucket=$(backendS3Bucket)" \
+                        -backend-config="key=$(backendKey)" \
+                        -backend-config="region=$(awsRegion)" \
+                        -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
+                        -backend-config="encrypt=true"
+                  env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+                    AWS_DEFAULT_REGION: $(awsRegion)
+
+                - task: Bash@3
+                  displayName: 'Terraform Apply'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(workingDirectory)'
+                    script: |
+                      echo "=== Iniciando Terraform Apply ==="
+                      terraform apply -auto-approve -no-color tfplan
+                      echo "=== Terraform Apply Completado ==="
+                  env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+                    AWS_DEFAULT_REGION: $(awsRegion)
+                    TF_IN_AUTOMATION: "true"
+                    TF_LOG: ""
+
+                - task: Bash@3
+                  displayName: 'Configure kubectl and verify cluster'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      # Configurar kubectl
+                      aws eks update-kubeconfig --name devops-eks --region $(awsRegion)
+
+                      # Verificar nodos
+                      echo "=== Kubernetes Nodes ==="
+                      kubectl get nodes -o wide
+
+                      # Verificar pods
+                      echo "=== All Pods ==="
+                      kubectl get pods -A
+
+                      # Verificar addons
+                      echo "=== EKS Addons ==="
+                      aws eks list-addons --cluster-name devops-eks --region $(awsRegion)
+                  env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+                    AWS_DEFAULT_REGION: $(awsRegion)
+
+                - task: Bash@3
+                  displayName: 'Setup RBAC for Azure DevOps'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(System.DefaultWorkingDirectory)/k8s/rbac'
+                    script: |
+                      echo "=== Configurando RBAC para Azure DevOps ==="
+
+                      # Aplicar manifiestos de RBAC
+                      echo "Creando namespace 'devops'..."
+                      kubectl apply -f namespace.yaml
+
+                      echo "Creando ServiceAccount 'azure-devops-sa'..."
+                      kubectl apply -f serviceaccount.yaml
+
+                      echo "Creando Role..."
+                      kubectl apply -f role.yaml
+
+                      echo "Creando RoleBinding..."
+                      kubectl apply -f rolebinding.yaml
+
+                      echo "Creando ClusterRole..."
+                      kubectl apply -f clusterrole.yaml
+
+                      echo "Creando ClusterRoleBinding..."
+                      kubectl apply -f clusterrolebinding.yaml
+
+                      echo "Esperando a que el ServiceAccount esté listo..."
+                      sleep 5
+
+                      # Crear Secret para el token (K8s 1.24+)
+                      echo "Creando Secret para el token..."
+                      cat <<EOF | kubectl apply -f -
+                      apiVersion: v1
+                      kind: Secret
+                      metadata:
+                        name: azure-devops-sa-token
+                        namespace: devops
+                        annotations:
+                          kubernetes.io/service-account.name: azure-devops-sa
+                      type: kubernetes.io/service-account-token
+                      EOF
+
+                      sleep 3
+
+                      # Verificar RBAC
+                      echo ""
+                      echo "=== Verificando RBAC ==="
+                      kubectl get namespace devops
+                      kubectl get serviceaccount -n devops
+                      kubectl get role,rolebinding -n devops
+
+                      echo ""
+                      echo "=== RBAC configurado exitosamente ==="
+
+  - stage: Destroy
+    displayName: 'Terraform Destroy (Manual)'
+    dependsOn: []
+    condition: and(succeeded(), eq(variables['DestroyInfrastructure'], 'true'))
+    jobs:
+      - deployment: TerraformDestroy
+        displayName: 'Destroy Infrastructure'
+        environment: 'Development-Destroy'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: Bash@3
+                  displayName: 'Install Terraform'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      wget https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip
+                      unzip terraform_$(terraformVersion)_linux_amd64.zip
+                      sudo mv terraform /usr/local/bin/
+                      terraform version
+
+                - task: Bash@3
+                  displayName: 'Terraform Init'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(workingDirectory)'
+                    script: |
+                      terraform init \
+                        -backend-config="bucket=$(backendS3Bucket)" \
+                        -backend-config="key=$(backendKey)" \
+                        -backend-config="region=$(awsRegion)" \
+                        -backend-config="dynamodb_table=$(backendDynamoDBTable)" \
+                        -backend-config="encrypt=true"
+                  env:
+                    AWS_DEFAULT_REGION: $(awsRegion)
+
+                - task: Bash@3
+                  displayName: 'Terraform Destroy'
+                  inputs:
+                    targetType: 'inline'
+                    workingDirectory: '$(workingDirectory)'
+                    script: |
+                      echo "=== Iniciando Terraform Destroy ==="
+                      terraform destroy -auto-approve -no-color
+                      echo "=== Terraform Destroy Completado ==="
+                  env:
+                    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+                    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+                    AWS_DEFAULT_REGION: $(awsRegion)
+                    TF_IN_AUTOMATION: "true"
+                    TF_LOG: ""

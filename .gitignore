@@ -1,0 +1,45 @@
+# ----------------------------
+# Terraform
+# ----------------------------
+
+# 1. Ignorar la carpeta donde Terraform guarda los proveedores y módulos cacheados
+.terraform/
+
+# 2. Ignorar únicamente el lockfile (se regenera con init)
+.terraform.lock.hcl
+
+# 3. Ignorar archivos de estado de Terraform (CRÍTICO - contienen info sensible)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# 4. Ignorar planes y overrides temporales
+*.tfplan
+*.tfplan.*
+tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+
+# 5. Ignorar archivos de variables que pueden contener secrets
+# Nota: terraform.tfvars no contiene datos sensibles, por lo que se incluye en el repo
+*.tfvars.json
+!terraform.tfvars
+!terraform.tfvars.example
+!*.auto.tfvars.example
+
+# 6. Ignorar archivos temporales del editor o del sistema
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 7. Ignorar logs y archivos temporales
+*.log
+.env
+.env.*
