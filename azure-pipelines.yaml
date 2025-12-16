@@ -14,7 +14,7 @@ resources:
       type: github
       name: jhoangaleano1993/AzureDevOpsTemplate
       ref: refs/heads/dev
-      endpoint: GitHubConnection
+      endpoint: AzureDevOpsTemplate
 
 pool:
   name: Default
