@@ -58,7 +58,7 @@ stages:
               awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
               awsRegion: $(awsRegion)
 
-          # Validar y verificar formato (estricto en PRs)
+          # Validar y verificar formato
           - template: templates/terraform-validate.yml@templates
             parameters:
               workingDirectory: $(workingDirectory)
@@ -116,7 +116,7 @@ stages:
   - stage: Apply
     displayName: 'Terraform Apply'
     dependsOn: Plan
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
     jobs:
       - deployment: TerraformApply
         displayName: 'Apply Infrastructure Changes'
