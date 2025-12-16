@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: azure-devops-cluster-rolebinding
+  labels:
+    app: azure-devops
+    managed-by: terraform
+subjects:
+  - kind: ServiceAccount
+    name: azure-devops-sa
+    namespace: devops
+roleRef:
+  kind: ClusterRole
+  name: azure-devops-cluster-role
+  apiGroup: rbac.authorization.k8s.io
