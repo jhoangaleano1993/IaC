@@ -8,7 +8,7 @@ Este directorio contiene la infraestructura para el backend remoto de Terraform,
 
 Este módulo debe ejecutarse **UNA SOLA VEZ** antes de configurar el backend remoto en el proyecto principal. El backend de este módulo es **local** porque no puede usar un backend remoto que aún no existe.
 
-## Setup Automático (Recomendado)
+## Setup Automático
 
 La forma más fácil es usar el script automatizado:
 

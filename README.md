@@ -12,10 +12,9 @@ Este repositorio contiene la implementación completa de una infraestructura de 
 - **CI/CD automatizado** con Azure DevOps Pipelines
 - **Gestión de estado remoto** con S3 y DynamoDB
 - **Seguridad y permisos** con IAM roles y políticas
-- **Arquitectura Cloud Native** siguiendo mejores prácticas
 
 🏷️ **Ambiente**: Development (Dev)
-⚠️ **Nota**: Esta es una infraestructura de desarrollo/prueba, no para producción
+ **Nota**: Esta es una infraestructura de prueba.
 
 ---
 
@@ -49,11 +48,9 @@ terraform apply
 terraform output -raw access_key_id
 terraform output -raw secret_access_key
 
-# 5. Configurar en Azure DevOps (ver documentación)
+# 5. Configurar en Azure DevOps
 # 6. Ejecutar pipeline desde Azure DevOps
 ```
-
-📖 **Documentación detallada:** [docs/SETUP_COMPLETO.md](docs/SETUP_COMPLETO.md)
 
 ---
 
@@ -66,19 +63,16 @@ IaC/
 ├── README.md
 │
 ├── iac/                          # Infraestructura como Código
-│   ├── terraform-backend/        # Backend S3 + DynamoDB (Paso 1)
-│   ├── terraform-iam-user/       # Usuario IAM para Azure DevOps (Paso 2)
-│   ├── terraform/                # Infraestructura EKS (Paso 3)
-│   │   └── modules/
-│   │       ├── vpc/              # Módulo VPC
-│   │       ├── eks/              # Módulo EKS
-│   │       └── iam/              # Módulo IAM
-│   └── setup-backend.sh
-│
-└── docs/                         # Documentación técnica
-    ├── SETUP_COMPLETO.md
-    ├── AWS_IAM_SETUP.md
-    └── AZURE_DEVOPS_SETUP.md
+    ├── terraform-backend/        # Backend S3 + DynamoDB 
+    ├── terraform-iam-user/       # Usuario IAM para Azure DevOps 
+    ├── terraform/                # Infraestructura EKS 
+    │   └── modules/
+    │       ├── vpc/              # Módulo VPC
+    │       ├── eks/              # Módulo EKS
+    │       └── iam/              # Módulo IAM
+    └── setup-backend.sh
+
+
 ```
 
 ---
@@ -103,39 +97,6 @@ IaC/
 - **Node Groups**: Nodos t3.medium en subnets privadas
 - **Addons**: vpc-cni, kube-proxy, coredns
 - **NAT Gateways**: Para acceso a internet desde subnets privadas
-
-### Flujo de Despliegue
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│               SETUP INICIAL (Una vez, manual)                │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-    ┌─────────────────────────────────────────┐
-    │ 1. terraform-backend/                    │
-    │    Crear S3 + DynamoDB                   │
-    └─────────────────────────────────────────┘
-                          ↓
-    ┌─────────────────────────────────────────┐
-    │ 2. terraform-iam-user/                   │
-    │    Crear usuario IAM                     │
-    └─────────────────────────────────────────┘
-                          ↓
-    ┌─────────────────────────────────────────┐
-    │ 3. Azure DevOps                          │
-    │    Configurar Variable Group             │
-    └─────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│            DESPLIEGUE CONTINUO (Azure DevOps)                │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-    ┌─────────────────────────────────────────┐
-    │ 4. terraform/                            │
-    │    Desplegar VPC + EKS                   │
-    │    (Automático desde pipeline)           │
-    └─────────────────────────────────────────┘
-```
 
 ---
 
@@ -186,22 +147,6 @@ El pipeline de Azure DevOps (`azure-pipelines.yml`) automatiza:
 | S3 Bucket | 1 | Terraform state |
 | DynamoDB Table | 1 | State locking |
 
-### Costos Estimados
-
-⚠️ **Importante**: Esta infraestructura genera costos en AWS
-
-- **EKS Cluster**: ~$73/mes
-- **EC2 Nodes** (t3.medium x2): ~$60/mes
-- **NAT Gateways** (x3): ~$97/mes
-- **Total estimado**: ~$230/mes
-
-💡 **Ambiente de Desarrollo**: Recuerda destruir la infraestructura cuando no la uses para evitar costos innecesarios:
-```bash
-terraform destroy
-```
-
----
-
 ## 🔐 Seguridad
 
 ### Implementaciones de Seguridad
@@ -227,23 +172,6 @@ terraform destroy
 - Security groups restrictivos
 - NAT Gateways para salida controlada
 
----
-
-## 📖 Documentación
-
-### Guías Principales
-
-- 📘 [SETUP_COMPLETO.md](docs/SETUP_COMPLETO.md) - Guía paso a paso completa
-- 🔑 [AWS_IAM_SETUP.md](docs/AWS_IAM_SETUP.md) - Configuración de credenciales
-- 🔄 [AZURE_DEVOPS_SETUP.md](docs/AZURE_DEVOPS_SETUP.md) - Setup del pipeline
-
-### Por Componente
-
-- 📦 [terraform-backend/README.md](iac/terraform-backend/README.md)
-- 👤 [terraform-iam-user/README.md](iac/terraform-iam-user/README.md)
-- ☁️ [modules/iam/README.md](iac/terraform/modules/iam/README.md)
-
----
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -308,8 +236,6 @@ cd ../terraform-backend
 terraform destroy
 ```
 
-⚠️ **Advertencia**: Asegúrate de hacer backup del estado antes de destruir
-
 ---
 
 ## 🎯 Buenas Prácticas Aplicadas
@@ -329,75 +255,12 @@ terraform destroy
 - Secretos no expuestos en código
 - Backend encriptado
 
-✅ **Documentación**
-- README en cada componente
-- Diagramas de arquitectura
-- Guías paso a paso
-
-✅ **Organización**
-- Estructura clara de directorios
-- Separación de responsabilidades
-- Nomenclatura consistente
-
----
-
-## 🐛 Troubleshooting
-
-### Problemas Comunes
-
-**Error: "Bucket already exists"**
-```bash
-terraform import aws_s3_bucket.terraform_state tfstate-devops-289997607932
-```
-
-**Error: "Access Denied" en pipeline**
-- Verifica que las credenciales en Azure DevOps sean correctas
-- Verifica que el usuario IAM tenga los permisos necesarios
-
-**Error: Nodos no se registran en EKS**
-- Verifica security groups
-- Revisa logs de los nodos: `kubectl logs -n kube-system`
-
-📖 Ver más en: [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-
----
-
-## 📝 Estado del Proyecto
-
-- ✅ Infraestructura base (VPC + EKS)
-- ✅ Backend de Terraform
-- ✅ Pipeline de CI/CD
-- ✅ Gestión de credenciales
-- ✅ Documentación completa
-- ⏳ Aplicación de ejemplo (próximamente)
-- ⏳ Monitoreo y alertas (próximamente)
-
----
-
-## 👥 Contribución
-
-Este es un proyecto de prueba técnica. Para sugerencias:
-
-1. Fork el repositorio
-2. Crea una rama feature (`git checkout -b feature/mejora`)
-3. Commit tus cambios (`git commit -m 'Add: nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/mejora`)
-5. Abre un Pull Request
-
----
-
-## 📄 Licencia
-
-Este proyecto es de uso educativo y de evaluación técnica.
-
----
 
 ## 📞 Soporte
 
-Para preguntas o problemas:
+Preguntas o problemas:
 - 📧 Email: jhoangaleano1993@gmail.com
 - 📝 Issues: [GitHub Issues](https://github.com/jhoangaleano1993/IaC/issues)
-- 📚 Documentación: [docs/](docs/)
 
 ---
 
