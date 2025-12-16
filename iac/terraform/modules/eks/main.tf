@@ -10,6 +10,22 @@ module "eks" {
   # Agregar permisos de acceso al cluster para identidad AWS
   enable_cluster_creator_admin_permissions = true
 
+  # Configurar acceso adicional al cluster
+  access_entries = {
+    sebastian = {
+      principal_arn = "arn:aws:iam::289997607932:user/sebastian.galeano"
+
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
 
