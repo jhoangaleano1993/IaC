@@ -16,10 +16,14 @@ terraform {
     }
   }
 
-  # Backend local porque este código se ejecuta UNA VEZ de forma manual
-  # No necesita backend remoto
-  backend "local" {
-    path = "terraform.tfstate"
+  # Backend remoto en S3 para persistencia y compartir estado
+  # Importante: el tfstate contiene las access keys del usuario IAM en texto plano
+  backend "s3" {
+    bucket         = "tfstate-devops-289997607932"
+    key            = "iam-user.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-state-lock"
+    encrypt        = true
   }
 }
 
