@@ -8,6 +8,12 @@ trigger:
     include:
       - iac/terraform/**
 
+parameters:
+  - name: DestroyInfrastructure
+    displayName: 'Destroy Infrastructure'
+    type: boolean
+    default: false
+
 resources:
   repositories:
     - repository: templates
@@ -278,7 +284,7 @@ stages:
   - stage: Destroy
     displayName: 'Terraform Destroy (Manual)'
     dependsOn: []
-    condition: and(succeeded(), eq(variables['DestroyInfrastructure'], 'true'))
+    condition: eq('${{ parameters.DestroyInfrastructure }}', 'true')
     jobs:
       - deployment: TerraformDestroy
         displayName: 'Destroy Infrastructure'
