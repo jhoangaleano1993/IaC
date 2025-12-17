@@ -41,6 +41,11 @@ rules:
     resources: ["services", "endpoints", "pods", "configmaps", "secrets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
+  # Permisos para logs y attach de pods (necesario para kubectl run --rm -i)
+  - apiGroups: [""]
+    resources: ["pods/log", "pods/attach"]
+    verbs: ["get", "list", "watch", "create"]
+
   # Permisos para autoscaling
   - apiGroups: ["autoscaling"]
     resources: ["horizontalpodautoscalers"]
