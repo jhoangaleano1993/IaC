@@ -33,11 +33,12 @@ resource "aws_ecr_lifecycle_policy" "this" {
     rules = [
       {
         rulePriority = 1
-        description  = "Keep last ${var.max_image_count} images"
+        description  = "Delete untagged images older than ${var.untagged_days} days"
         selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = var.max_image_count
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = var.untagged_days
         }
         action = {
           type = "expire"
@@ -45,12 +46,12 @@ resource "aws_ecr_lifecycle_policy" "this" {
       },
       {
         rulePriority = 2
-        description  = "Delete untagged images older than ${var.untagged_days} days"
+        description  = "Keep last ${var.max_image_count} tagged images"
         selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = var.untagged_days
+          tagStatus     = "tagged"
+          tagPrefixList = ["v", "dev", "rc"]
+          countType     = "imageCountMoreThan"
+          countNumber   = var.max_image_count
         }
         action = {
           type = "expire"
