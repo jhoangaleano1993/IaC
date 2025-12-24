@@ -86,7 +86,7 @@ resource "null_resource" "k8s_cleanup" {
       echo "LIMPIEZA PRE-DESTROY COMPLETADA"
       echo "============================================="
     EOT
-    
+
     interpreter = ["/bin/bash", "-c"]
   }
 
@@ -132,7 +132,7 @@ resource "null_resource" "ecr_cleanup" {
       echo "LIMPIEZA DE ECR COMPLETADA"
       echo "============================================="
     EOT
-    
+
     interpreter = ["/bin/bash", "-c"]
   }
 }
