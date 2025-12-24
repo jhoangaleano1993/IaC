@@ -47,12 +47,10 @@ stages:
       - job: TerraformValidate
         displayName: 'Validate Terraform Configuration'
         steps:
-          # Instalar Terraform
           - template: templates/install-terraform.yml@templates
             parameters:
               terraformVersion: $(terraformVersion)
 
-          # Inicializar Terraform
           - template: templates/terraform-init.yml@templates
             parameters:
               workingDirectory: $(workingDirectory)
@@ -64,7 +62,6 @@ stages:
               awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
               awsRegion: $(awsRegion)
 
-          # Validar y verificar formato
           - template: templates/terraform-validate.yml@templates
             parameters:
               workingDirectory: $(workingDirectory)
@@ -78,12 +75,10 @@ stages:
       - job: TerraformPlan
         displayName: 'Plan Infrastructure Changes'
         steps:
-          # Instalar Terraform
           - template: templates/install-terraform.yml@templates
             parameters:
               terraformVersion: $(terraformVersion)
 
-          # Inicializar Terraform
           - template: templates/terraform-init.yml@templates
             parameters:
               workingDirectory: $(workingDirectory)
@@ -95,7 +90,6 @@ stages:
               awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
               awsRegion: $(awsRegion)
 
-          # Generar plan de Terraform
           - template: templates/terraform-plan.yml@templates
             parameters:
               workingDirectory: $(workingDirectory)
@@ -104,7 +98,6 @@ stages:
               awsRegion: $(awsRegion)
               timeoutInMinutes: 15
 
-          # Publicar plan como artefacto
           - task: PublishPipelineArtifact@1
             displayName: 'Publish Terraform Plan'
             inputs:
@@ -133,21 +126,18 @@ stages:
               steps:
                 - checkout: self
 
-                # Instalar herramientas (Terraform, AWS CLI, kubectl)
                 - template: templates/install-terraform.yml@templates
                   parameters:
                     terraformVersion: $(terraformVersion)
                     installAwsCli: true
                     installKubectl: true
 
-                # Descargar plan generado en stage anterior
                 - task: DownloadPipelineArtifact@2
                   displayName: 'Download Terraform Plan'
                   inputs:
                     artifact: 'terraform-plan'
                     path: '$(workingDirectory)'
 
-                # Inicializar Terraform
                 - template: templates/terraform-init.yml@templates
                   parameters:
                     workingDirectory: $(workingDirectory)
@@ -159,7 +149,6 @@ stages:
                     awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
                     awsRegion: $(awsRegion)
 
-                # Aplicar plan de Terraform
                 - template: templates/terraform-apply.yml@templates
                   parameters:
                     workingDirectory: $(workingDirectory)
@@ -168,92 +157,49 @@ stages:
                     awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
                     awsRegion: $(awsRegion)
 
-                # Verificar cluster EKS
                 - task: Bash@3
                   displayName: 'Configure kubectl and verify cluster'
                   inputs:
                     targetType: 'inline'
                     script: |
-                      # Configurar kubectl
                       aws eks update-kubeconfig --name devops-eks --region $(awsRegion)
-
-                      # Verificar nodos
-                      echo "=== Kubernetes Nodes ==="
+                      echo === Kubernetes Nodes ===
                       kubectl get nodes -o wide
-
-                      # Verificar pods
-                      echo "=== All Pods ==="
+                      echo === All Pods ===
                       kubectl get pods -A
-
-                      # Verificar addons
-                      echo "=== EKS Addons ==="
-                      aws eks list-addons --cluster-name devops-eks --region $(awsRegion)
                   env:
                     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
                     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
-                # Crear namespaces de aplicación
                 - task: Bash@3
                   displayName: 'Create Application Namespaces'
                   inputs:
                     targetType: 'inline'
                     workingDirectory: '$(System.DefaultWorkingDirectory)/k8s/namespaces'
                     script: |
-                      echo "=== Creando namespaces de aplicación ==="
-
-                      echo "Creando namespace 'dev'..."
                       kubectl apply -f dev.yaml
-
-                      echo "Creando namespace 'qa'..."
                       kubectl apply -f qa.yaml
-
-                      echo "Creando namespace 'production'..."
                       kubectl apply -f production.yaml
-
-                      echo "Verificando namespaces..."
-                      kubectl get namespaces qa,production
-
-                      echo ""
-                      echo "=== Namespaces de aplicación creados exitosamente ==="
+                      kubectl get namespaces
                   env:
                     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
                     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
                     AWS_DEFAULT_REGION: $(awsRegion)
 
-                # Configurar RBAC en Kubernetes
                 - task: Bash@3
                   displayName: 'Setup RBAC for Azure DevOps'
                   inputs:
                     targetType: 'inline'
                     workingDirectory: '$(System.DefaultWorkingDirectory)/k8s/rbac'
                     script: |
-                      echo "=== Configurando RBAC para Azure DevOps ==="
-
-                      # Aplicar manifiestos de RBAC
-                      echo "Creando namespace 'devops'..."
                       kubectl apply -f namespace.yaml
-
-                      echo "Creando ServiceAccount 'azure-devops-sa'..."
                       kubectl apply -f serviceaccount.yaml
-
-                      echo "Creando Role..."
                       kubectl apply -f role.yaml
-
-                      echo "Creando RoleBinding..."
                       kubectl apply -f rolebinding.yaml
-
-                      echo "Creando ClusterRole..."
                       kubectl apply -f clusterrole.yaml
-
-                      echo "Creando ClusterRoleBinding..."
                       kubectl apply -f clusterrolebinding.yaml
-
-                      echo "Esperando a que el ServiceAccount esté listo..."
                       sleep 5
-
-                      # Crear Secret para el token (K8s 1.24+)
-                      echo "Creando Secret para el token..."
                       cat <<EOF | kubectl apply -f -
                       apiVersion: v1
                       kind: Secret
@@ -264,18 +210,7 @@ stages:
                           kubernetes.io/service-account.name: azure-devops-sa
                       type: kubernetes.io/service-account-token
                       EOF
-
-                      sleep 3
-
-                      # Verificar RBAC
-                      echo ""
-                      echo "=== Verificando RBAC ==="
-                      kubectl get namespace devops
                       kubectl get serviceaccount -n devops
-                      kubectl get role,rolebinding -n devops
-
-                      echo ""
-                      echo "=== RBAC configurado exitosamente ==="
                   env:
                     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
                     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
@@ -295,12 +230,12 @@ stages:
               steps:
                 - checkout: self
 
-                # Instalar Terraform
                 - template: templates/install-terraform.yml@templates
                   parameters:
                     terraformVersion: $(terraformVersion)
+                    installAwsCli: true
+                    installKubectl: true
 
-                # Inicializar Terraform
                 - template: templates/terraform-init.yml@templates
                   parameters:
                     workingDirectory: $(workingDirectory)
@@ -312,10 +247,10 @@ stages:
                     awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
                     awsRegion: $(awsRegion)
 
-                # Destruir infraestructura
                 - template: templates/terraform-destroy.yml@templates
                   parameters:
                     workingDirectory: $(workingDirectory)
                     awsAccessKeyId: $(AWS_ACCESS_KEY_ID)
                     awsSecretAccessKey: $(AWS_SECRET_ACCESS_KEY)
                     awsRegion: $(awsRegion)
+                    timeoutInMinutes: 45

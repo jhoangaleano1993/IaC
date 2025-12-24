@@ -1,3 +1,18 @@
+# Módulo de Cleanup - DEBE ejecutarse PRIMERO durante destroy
+# Terraform destruye en orden inverso a las dependencias, así que este módulo
+# se destruirá ANTES que EKS, VPC y ECR, limpiando las dependencias dinámicas.
+module "cleanup" {
+  source = "./modules/cleanup"
+
+  cluster_name        = var.cluster_name
+  region              = var.aws_region
+  ecr_repository_name = "app-hola-mundo"
+
+  # Dependencias: cleanup depende de EKS y ECR para que durante DESTROY
+  # se ejecute ANTES de destruirlos (orden inverso)
+  depends_on = [module.eks, module.ecr]
+}
+
 module "vpc" {
   source = "./modules/vpc"
 
